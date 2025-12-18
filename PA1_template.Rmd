@@ -1,0 +1,107 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output:
+  html_document:
+    keep_md: true
+---
+
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setup2, echo=TRUE}
+library(datasets)
+activity <- read.csv("activity.csv")
+```
+
+
+```{r preprocess, echo=TRUE}
+activity$date <- as.Date(activity$date)
+```
+
+```{r total_steps, echo=TRUE}
+total_steps <- aggregate(steps ~ date, data = activity, sum, na.rm = TRUE)
+```
+
+
+```{r hist1, echo=TRUE}
+hist(total_steps$steps,
+     main = "Total Steps per Day",
+     xlab = "Steps per day",
+     col = "lightblue")
+```
+
+```{r mean_median1, echo=TRUE}
+mean(total_steps$steps)
+median(total_steps$steps)
+```
+
+```{r interval_avg, echo=TRUE}
+interval_avg <- aggregate(steps ~ interval, data = activity, mean, na.rm = TRUE)
+```
+
+```{r time_series, echo=TRUE}
+plot(interval_avg$interval,interval_avg$steps,type = "l",xlab = "5-minute interval",ylab = "Average steps", main = "Average Daily Activity Pattern")
+```
+
+```{r max_interval, echo=TRUE}
+interval_avg[which.max(interval_avg$steps), ]
+```
+
+```{r missing_count, echo=TRUE}
+sum(is.na(activity$steps))
+```
+
+```{r impute, echo=TRUE}
+activity_imputed <- activity
+na_index <- is.na(activity_imputed$steps)
+
+activity_imputed$steps[na_index] <-
+  interval_avg$steps[match(activity_imputed$interval[na_index],
+                            interval_avg$interval)]
+```
+
+```{r total_steps_imputed, echo=TRUE}
+total_steps_imp <- aggregate(steps ~ date,
+                             data = activity_imputed,
+                             sum)
+```
+
+```{r hist2, echo=TRUE}
+hist(total_steps_imp$steps,
+     main = "Total Steps per Day (Imputed)",
+     xlab = "Steps per day",
+     col = "lightgreen")
+```
+
+```{r mean_median2, echo=TRUE}
+mean(total_steps_imp$steps)
+median(total_steps_imp$steps)
+```
+
+```{r weekday_weekend, echo=TRUE}
+activity_imputed$daytype <- ifelse(
+  weekdays(activity_imputed$date) %in% c("Saturday", "Sunday"),
+  "Weekend",
+  "Weekday"
+)
+
+activity_imputed$daytype <- factor(activity_imputed$daytype)
+```
+
+```{r panel_plot, echo=TRUE}
+library(lattice)
+
+avg_interval_daytype <- aggregate(steps ~ interval + daytype,
+                                  data = activity_imputed,
+                                  mean)
+
+xyplot(steps ~ interval | daytype,
+       data = avg_interval_daytype,
+       type = "l",
+       layout = c(1, 2),
+       xlab = "Interval",
+       ylab = "Average Steps")
+
+```
